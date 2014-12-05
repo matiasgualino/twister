@@ -1,0 +1,39 @@
+class HelloWorld {
+    main(){
+    	int j;
+    	int aux;
+    	j = 8;
+    	
+    	aux = j / 3;
+    	aux = j - (aux * 3);
+    	
+    	si(aux == 0) {
+    		printStr("Multiplo de 3");
+    	} sino {
+    		printStr("No es multiplo de 3");
+    	}
+    	printStr("\n");
+    	aux = 0;
+    	mientras(aux < j) {
+    		printInt(aux);
+    		aux += 1;
+    	}
+    	//Si se descomenta tira el error de jasmin.
+    	//hola();
+    	//mundo();
+    	//chau();
+    	//mundo();
+    }  
+    int hola() {
+    	printStr("Hola ");
+    	return 0;
+    }
+    int mundo() {
+    	printStr("Mundo ");
+    	return 0;
+    }
+    int chau() {
+    	printStr("Chau ");
+    	return 0;
+    }
+}

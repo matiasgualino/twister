@@ -1,0 +1,14 @@
+class Factorial {
+  main() {
+    	int n;
+    	int i;
+    	n = 10;
+    	i = 1;
+    	mientras (n > 1) {
+      		i *= n;
+      		n -= 1;
+    	}
+    	printStr("Factorial: ");
+    	printInt(i);
+	}
+}

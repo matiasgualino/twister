@@ -1,0 +1,19 @@
+class Factorial{
+	main(){
+		printInt(ComputeFac(10));
+	}
+	int ComputeFac(int num){
+		int num_aux ;
+		int p;
+		p = 0;
+		num_aux = 0;
+		si (num < 1){
+			num_aux = 1 ;
+		}
+		sino {
+			p = ComputeFac(num-1);
+			num_aux = num * p;
+		}
+		return num_aux;
+	}
+}

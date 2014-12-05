@@ -1,0 +1,1 @@
+package ar.edu.itba.geb.compiler.java.syntaxtree;import ar.edu.itba.geb.compiler.java.visitors.TypeVisitor;import ar.edu.itba.geb.compiler.java.visitors.Visitor;public interface Statement {  public void accept(Visitor v);  public Type accept(TypeVisitor v);}

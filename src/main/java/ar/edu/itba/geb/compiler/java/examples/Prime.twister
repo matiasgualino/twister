@@ -1,0 +1,56 @@
+class Prime {
+  main() {
+  		int i;
+  		i = 1;
+		mientras(i <= 20) {
+			printInt(i);
+    		si(isPrime(i)) {
+        		printStr(" es primo");
+    		} sino {
+        		printStr(" no es primo");
+    		}
+    		i += 1;	
+		}
+	}
+	boolean isPrime(int n) {
+		int i, mod2, mod3, pot;
+		boolean prime;
+		prime = true;
+		i = 0;
+		mod2 = 0;
+		mod3 = 0;
+		pot = 0;
+    	si(n <= 3) {
+        	si(n > 1) {
+        		prime = true;
+        	} sino {
+        		prime = false;
+        	}
+    	} sino {
+    		mod2 = mod(n, 2);
+    		mod3 = mod(n, 3);
+        	if (mod2 == 0 || mod3 == 0) {
+            	prime = false;
+        	} sino {
+            	i = 5;
+            	pot = i * i;
+            	mientras(pot <= n) {
+            		mod2 = mod(n, i);
+            		mod3 = mod(n, i+2);
+                	if (mod2 == 0 || mod3 == 0) {
+                    	prime = false;
+                	}
+                	i += 6;
+                	pot = i * i;
+            	}
+        	}
+    	}
+    	return prime;
+	}
+	int mod(int i, int n) {
+		int j;
+		j = i / n;
+		j = i - (n*j);
+		return j;
+	}
+}

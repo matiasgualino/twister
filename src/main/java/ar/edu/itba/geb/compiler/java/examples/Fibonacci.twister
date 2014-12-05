@@ -1,0 +1,18 @@
+class Fibonacci {
+	main() {
+		int f;
+		int a;
+		f = 0;
+		printStr("Fibonacci: ");
+		f = fibonacci(8);
+		printInt(f);
+	}
+	int fibonacci(int n) {
+  		si (n > 2) {
+    		n = n;
+  		} sino {
+  			n = fibonacci(n - 1) + fibonacci(n - 2);
+  		}
+  		return n;
+	}
+}

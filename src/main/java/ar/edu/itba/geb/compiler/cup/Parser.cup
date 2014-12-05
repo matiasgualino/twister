@@ -1,0 +1,639 @@
+package ar.edu.itba.geb.compiler.java.core;
+
+import java_cup.runtime.Symbol;
+import ar.edu.itba.geb.compiler.java.syntaxtree.*;
+import ar.edu.itba.geb.compiler.java.visitors.*;
+
+scan with {: return lex.next_token(); :};
+
+action code {:
+:}
+
+parser code {:
+	AnalizadorLexico lex;
+	 public AnalizadorSintactico(AnalizadorLexico lexx)
+	{
+		super(lexx);
+		lex = lexx;
+	}
+
+	 public void syntax_error(Symbol s)
+	{
+		try
+		{
+			System.out.println("Syntax error at line: " + s.left + ", column: " + s.right + ", toString: " + s.value.toString());
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	 public static void print(String s)
+	{
+		System.out.println(s);
+	}
+	
+	public void unrecovered_syntax_error(java_cup.runtime.Symbol cur_token) throws java.lang.Exception
+{
+  throw new Exception("Unrecoverable Syntax Error " + cur_token.sym + " - " +  cur_token.value);
+}
+	
+:};
+
+//TERMINALS
+
+terminal CLASS, VOID, MAIN;
+terminal STRING;
+terminal RETURN;
+terminal INT, BOOL;
+terminal IF, ELSE, WHILE, FOR;
+terminal PRINT_INT, PRINT_STRING;
+terminal TRUE, FALSE;
+terminal THIS, NEW, PUBLIC;
+
+terminal AND, EQUAL, LESS_OR_EQUAL, GREATER_OR_EQUAL, LESS, GREATER, NOT_EQUAL;
+terminal ASSIGN, ADD_ASSIGN, SUB_ASSIGN, MULT_ASSIGN;
+terminal OR, NOT;
+terminal ADD, SUB, MULT, DIV;
+terminal COMMA, SEMI, DOT;
+terminal LBRACE, RBRACE, LPARENS, RPARENS, LBRACKET, RBRACKET;
+
+terminal java.lang.String ID;
+terminal java.lang.String STRING_LITERAL;
+
+//NONTERMINAL
+non terminal Goal;
+non terminal MainClass MainClass;
+non terminal ClassDecl ClassDeclaration;
+non terminal VarDecl VarDeclaration; 
+non terminal MethodDecl MethodDeclaration;
+non terminal Type Type;
+non terminal Statement Statement;
+non terminal Exp Expression; 
+
+non terminal ClassDeclList CDL; 
+non terminal VarDeclList VDL; 
+non terminal MethodDeclList MDL; 
+non terminal FormalList PDL;
+non terminal Formal Formal;
+non terminal StatementList SDL;
+non terminal ExpList EDL;
+non terminal IdentifierList IdentifierList;
+
+terminal String _STRING_;
+terminal java.lang.Number _INTEGER_;
+
+precedence left MULT, ADD, SUB, DIV, INT, STRING, SEMI, AND, OR, RETURN, ELSE, ID, BOOL, VOID;
+precedence left EQUAL, LESS_OR_EQUAL, GREATER_OR_EQUAL, LESS, GREATER, NOT_EQUAL;
+precedence left RETURN, RPARENS;
+
+start with Goal;
+
+Goal ::=
+		MainClass:mc CDL:cdl {: 
+			DepthFirstVisitor dfv = new DepthFirstVisitor(); 
+			Program pg = new Program(mc,cdl); 
+			dfv.visit(pg); 
+			RESULT = pg; :}
+	|	MainClass:mc  {: 
+			DepthFirstVisitor dfv = new DepthFirstVisitor();
+			ClassDeclList list = new ClassDeclList();  
+			Program pg = new Program(mc,list);
+			dfv.visit(pg); 
+			RESULT = pg; :};
+
+ClassDeclaration	::=	
+		CLASS ID:id LBRACE VDL:vdl MDL:mdl RBRACE
+		{:  RESULT = new ClassDeclSimple(new Identifier(id, null),vdl, mdl); :}
+	|	CLASS ID:id LBRACE MDL:mdl RBRACE
+		{:  VarDeclList vdl =  new VarDeclList();
+			RESULT = new ClassDeclSimple(new Identifier(id, null),vdl, mdl); :}
+	|	CLASS ID:id LBRACE VDL:vdl RBRACE
+		{:  MethodDeclList mdl =  new MethodDeclList();
+			RESULT = new ClassDeclSimple(new Identifier(id, null),vdl, mdl); :}
+	|	CLASS ID:id LBRACE RBRACE
+		{:  VarDeclList vdl =  new VarDeclList();
+			MethodDeclList mdl =  new MethodDeclList();
+			RESULT = new ClassDeclSimple(new Identifier(id, null),vdl, mdl); :};
+
+MainClass	::=	
+		CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain SDL:sdlMain 
+			RBRACE 
+			VDL:vdl MDL:mdl
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, vdl, mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain SDL:sdlMain 
+			RBRACE 
+			VDL:vdl 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, vdl, new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain SDL:sdlMain 
+			RBRACE 
+			MDL:mdl 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, new VarDeclList(), mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain SDL:sdlMain 
+			RBRACE 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, new VarDeclList(), new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain 
+			RBRACE 
+			VDL:vdl MDL:mdl
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList sdl = new StatementList();
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, vdl, mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain 
+			RBRACE 
+			MDL:mdl
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList sdl = new StatementList();
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, new VarDeclList(), mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain 
+			RBRACE 
+			VDL:vdl 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList sdl = new StatementList();
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, vdl, new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				VDL:vdlMain 
+			RBRACE 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList sdl = new StatementList();
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, new VarDeclList(), new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				SDL:sdlMain 
+			RBRACE 
+			VDL:vdl MDL:mdl
+		RBRACE
+		{:  
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, vdl, mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				SDL:sdlMain 
+			RBRACE 
+			MDL:mdl
+		RBRACE
+		{:  
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, new VarDeclList(), mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				SDL:sdlMain 
+			RBRACE 
+			VDL:vdl
+		RBRACE
+		{:  
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, vdl, new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE 
+				SDL:sdlMain 
+			RBRACE 
+		RBRACE
+		{:  
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdlMain, new VarDeclList(), new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE  
+			RBRACE 
+			VDL:vdl MDL:mdl
+		RBRACE
+		{:  
+			StatementList sdl = new StatementList();
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, vdl, mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE  
+			RBRACE 
+			MDL:mdl
+		RBRACE
+		{:  
+			StatementList sdl = new StatementList();
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, new VarDeclList(), mdl); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE  
+			RBRACE 
+			VDL:vdl
+		RBRACE
+		{:  
+			StatementList sdl = new StatementList();
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, vdl, new MethodDeclList()); 
+		:}
+	|	CLASS ID:id LBRACE 
+			MAIN LPARENS  RPARENS LBRACE  
+			RBRACE 
+		RBRACE
+		{:  
+			StatementList sdl = new StatementList();
+			VarDeclList vdlMain = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlMain.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MainClass(new Identifier(id, null), 
+				new Identifier(id, null), vdlMain, sdl, new VarDeclList(), new MethodDeclList()); 
+		:};
+
+CDL ::=
+		ClassDeclaration:dc
+		{: 	ClassDeclList list = new ClassDeclList();
+			list.addElement(dc);
+			RESULT = list; :}
+	| 	CDL:list ClassDeclaration:dec 
+		{: 	list.addElement(dec);
+			RESULT = list; :};
+
+MDL ::= 
+		MethodDeclaration:dec
+		{: 	MethodDeclList list = new MethodDeclList();
+			list.addElement(dec);
+			RESULT = list; :}
+	| 	MDL:list MethodDeclaration:dec
+		{: 	list.addElement(dec);
+			RESULT = list; :};
+	
+EDL ::=
+		Expression:f1
+		{: 	ExpList list = new ExpList(); 
+			list.addElement(f1); 
+			RESULT = list; :}
+	|  	EDL:list COMMA Expression:exp
+		{: 	list.addElement(exp);
+			RESULT = list; :};
+
+SDL ::=
+		Statement:smnt
+		{: 	StatementList list = new StatementList();
+			list.addElement(smnt);
+			RESULT = list; :}
+	| 	SDL:list Statement:smnt
+		{: 	list.addElement(smnt);
+			RESULT = list; :};
+
+VDL ::=
+		VarDeclaration:dec 
+		{: 	VarDeclList list = new VarDeclList();
+			list.addElement(dec);
+			RESULT = list; :}
+	| 	VDL:list VarDeclaration:dec 
+		{: 	list.addElement(dec);
+			RESULT = list; :};
+
+VarDeclaration ::= Type:t IdentifierList:il SEMI {: RESULT = new VarDecl(t,il); :};
+IdentifierList ::= 
+		ID:id  {: RESULT = new IdentifierList(); RESULT.addLast(new Identifier(id, null)); :} 
+  	| 	ID:id COMMA IdentifierList:il  
+  		{: 	RESULT = il; 
+  			il.addFirst(new Identifier(id, null)); :}
+  	| 	{: RESULT = new IdentifierList(); :};
+
+Formal ::= Type:t ID:id {: RESULT = new Formal(t, new Identifier(id, null)); :};
+
+PDL ::= 
+		Formal:f1
+		{: 	FormalList list = new FormalList();
+			list.addElement(f1);
+			RESULT = list; :}
+	| 	PDL:list COMMA Formal:form
+		{: 	list.addElement(form);
+			RESULT = list; :};
+
+MethodDeclaration ::=
+		 Type:t ID:i LPARENS PDL:flist RPARENS LBRACE 
+			VDL:vdlist SDL:slist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:	Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il)); 
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS PDL:flist RPARENS LBRACE 
+			SDL:slist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{: 	VarDeclList vdlist = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS PDL:flist RPARENS LBRACE 
+			VDL:vdlist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:	Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList slist = new StatementList();
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS PDL:flist RPARENS LBRACE 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{: 	VarDeclList vdlist = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList slist = new StatementList();
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS RPARENS LBRACE 
+			VDL:vdlist SDL:slist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:  Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			FormalList flist = new FormalList();
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS RPARENS LBRACE 
+			SDL:slist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:  FormalList flist = new FormalList();
+			VarDeclList vdlist = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS RPARENS LBRACE 
+			VDL:vdlist 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:	Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			FormalList flist = new FormalList();
+			StatementList slist = new StatementList();
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :}
+	| 	 Type:t ID:i LPARENS RPARENS LBRACE 
+			RETURN Expression:expr SEMI 
+		RBRACE
+		{:	FormalList flist = new FormalList();
+			VarDeclList vdlist = new VarDeclList(); 
+			Identifier voidId = new Identifier("void@", null);
+			IdentifierList il = new IdentifierList();
+			il.addFirst(voidId);
+			vdlist.addElement(new VarDecl(VoidType.instance(), il));
+			StatementList slist = new StatementList();
+			RESULT = new MethodDecl(t, new Identifier(i, null), flist, vdlist, slist, expr); :};
+
+Statement ::=
+		ID:id LBRACKET Expression:exp1 RBRACKET ASSIGN Expression:exp2 SEMI
+		{: RESULT = new ArrayAssign(new Identifier(id, null), exp1, exp2); :}		
+	| 	ID:id ASSIGN Expression:e SEMI {: RESULT = new Assign(new Identifier(id, null), e); :}
+	| 	ID:id ADD_ASSIGN Expression:e SEMI {: RESULT = new Assign(new Identifier(id, null), new Plus(new Identifier(id, null), e)); :}
+	| 	ID:id MULT_ASSIGN Expression:e SEMI {: RESULT = new Assign(new Identifier(id, null), new Times(new Identifier(id, null), e)); :}
+	| 	ID:id SUB_ASSIGN Expression:e SEMI {: RESULT = new Assign(new Identifier(id, null), new Minus(new Identifier(id, null), e)); :}
+	|	WHILE LPARENS Expression:exp RPARENS LBRACE 
+			SDL:slist 
+		RBRACE
+		{: RESULT = new While(exp, slist); :}
+	| 	WHILE LPARENS Expression:exp RPARENS 
+			Statement:s
+		{: 	StatementList slist = new StatementList();
+			slist.addElement(s);
+			RESULT = new While(exp, slist); :}
+	| 	WHILE LPARENS Expression:exp RPARENS LBRACE RBRACE
+		{:  StatementList slist = new StatementList();
+			RESULT = new While(exp, slist); :}	
+	|	IF LPARENS Expression:e RPARENS Statement:s1 ELSE Statement:s2
+		{: 	StatementList s1list = new StatementList();
+			StatementList s2list = new StatementList();
+			s1list.addElement(s1);
+			s2list.addElement(s2);
+			RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS LBRACE 
+			SDL:s1list 
+		RBRACE 
+		ELSE Statement:s2
+		{: 	StatementList s2list = new StatementList();
+			s2list.addElement(s2);
+			RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS Statement:s1 
+		ELSE LBRACE 
+			SDL:s2list 
+		RBRACE 
+		{: 	StatementList s1list = new StatementList();
+			s1list.addElement(s1);
+			RESULT = new If(e, s1list, s2list); :} 
+	| 	IF LPARENS Expression:e RPARENS LBRACE 
+			SDL:s1list 
+		RBRACE ELSE LBRACE 
+			SDL:s2list 
+		RBRACE
+		{: RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS Statement:s1 
+		ELSE LBRACE RBRACE
+		{: 	StatementList s2list = new StatementList();
+			StatementList s1list = new StatementList();
+			s1list.addElement(s1);
+			RESULT = new If(e, s1list, s2list); :} 
+	| 	IF LPARENS Expression:e RPARENS LBRACE 
+			SDL:s1list 
+		RBRACE  ELSE LBRACE RBRACE
+		{: 	StatementList s2list = new StatementList();
+			RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS LBRACE 
+			SDL:s1list 
+		RBRACE 
+		{: 	StatementList s2list = new StatementList();
+			RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS LBRACE RBRACE 
+		ELSE Statement:s2 
+		{: 	StatementList s1list = new StatementList();
+			StatementList s2list = new StatementList();
+			s2list.addElement(s2);
+			RESULT = new If(e, s1list, s2list); :}
+	| 	IF LPARENS Expression:e RPARENS LBRACE RBRACE
+		ELSE LBRACE 
+			SDL:s2list 
+		RBRACE
+		{: 	StatementList s1list = new StatementList();
+			RESULT = new If(e, s1list, s2list); :}
+	| 	PRINT_INT LPARENS Expression:e RPARENS SEMI {: RESULT = new Print(e); :}
+	| 	PRINT_STRING LPARENS STRING_LITERAL:str RPARENS SEMI {: RESULT = new PrintString(str); :}
+	|	ID:id DOT ID:mId LPARENS EDL:edl RPARENS SEMI
+		{: 
+		Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new Identifier(id, null), new Identifier(mId, null), edl)); 
+		:}
+	|	ID:id DOT ID:mId LPARENS RPARENS SEMI
+		{: 
+		Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new Identifier(id, null), new Identifier(mId, null), new ExpList())); 
+		:}
+	|	ID:mId LPARENS RPARENS SEMI
+		{: 
+		Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new This(), new Identifier(mId, null), new ExpList())); 
+		:}
+	|	THIS DOT ID:mId LPARENS EDL:edl RPARENS SEMI
+		{: 
+			Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new This(), new Identifier(mId, null), edl)); 
+		:}
+	|	THIS DOT ID:mId LPARENS RPARENS SEMI
+		{: 
+			Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new This(), new Identifier(mId, null), new ExpList())); 
+		:}
+	|	ID:id DOT ID:mId LPARENS EDL:edl RPARENS 
+		{: 
+		Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new Identifier(id, null), new Identifier(mId, null), edl)); 
+		:}
+	|	THIS DOT ID:mId LPARENS EDL:edl RPARENS
+		{: 
+			Identifier v = new Identifier("void@", null);
+			RESULT = new Assign(v, new Call(new This(), new Identifier(mId, null), edl)); 
+		:};
+
+Type ::= 
+		INT  {: RESULT = IntegerType.instance(); :} 
+	| 	STRING  {: RESULT = StringType.instance(); :} 
+	|	INT LBRACKET RBRACKET {: RESULT = IntArrayType.instance(); :}
+	| 	STRING LBRACKET RBRACKET {: RESULT = StringArrayType.instance(); :}
+	| 	BOOL {: RESULT = BooleanType.instance(); :}
+	|	ID:id {: RESULT = new IdentifierType(id); :}
+	|	VOID {: RESULT = VoidType.instance(); :};
+
+Expression	::=	
+		Expression:e1 AND Expression:e2  {: RESULT = new And(e1, e2); :} 
+	|  	Expression:e1 OR Expression:e2  {: RESULT = new Or(e1, e2); :}
+	|	Expression:e1 LESS Expression:e2  {: RESULT = new LessThan(e1, e2); :} 
+	| 	Expression:e1 LESS_OR_EQUAL Expression:e2  {: RESULT = new LessOrEqual(e1, e2); :} 
+	| 	Expression:e1 GREATER Expression:e2  {: RESULT = new Greater(e1, e2); :} 
+	| 	Expression:e1 GREATER_OR_EQUAL Expression:e2  {: RESULT = new GreaterOrEqual(e1, e2); :} 
+	| 	Expression:e1 EQUAL Expression:e2  {: RESULT = new Equal(e1, e2); :} 
+	| 	Expression:e1 NOT_EQUAL Expression:e2  {: RESULT = new NotEqual(e1, e2); :}
+	| 	THIS {: RESULT = new This(); :}
+	| 	NEW INT LBRACKET Expression:exp RBRACKET {: RESULT = new NewArray(exp); :}
+	| 	NEW ID:id LPARENS RPARENS {: RESULT = new NewObject(new Identifier(id, null)); :}
+	| 	TRUE {: RESULT = new True(); :} 
+	| 	FALSE {: RESULT = new False(); :}
+	|	ID:id {: RESULT = new Identifier(id, null); :}
+	|	_STRING_:s {: RESULT = new StringLiteral(s); :}
+	|	_INTEGER_:i {: RESULT = new IntegerLiteral(i.intValue()); :} 
+	|	NOT Expression:e {: RESULT = new Not(e); :}
+	|	LPARENS Expression:e RPARENS  {: RESULT = e; :}
+	|	Expression:a ADD Expression:e  {: RESULT = new Plus(a, e); :} 
+  	| 	Expression:a SUB Expression:e  {: RESULT = new Minus(a, e); :} 
+	|	Expression:t MULT Expression:e  {: RESULT = new Times(t, e); :}
+	|	Expression:t DIV Expression:e  {: RESULT = new Div(t, e); :}
+	|	ID:id LPARENS EDL:edl RPARENS {: RESULT = new Call(new This(), new Identifier(id, null), edl); :}
+	|	ID:id LPARENS RPARENS {: RESULT = new Call(new This(), new Identifier(id, null), new ExpList()); :};
+	
